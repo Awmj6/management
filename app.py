@@ -1,43 +1,61 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
-import sqlite3
+import psycopg2
 from werkzeug.security import generate_password_hash, check_password_hash
+import os
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
 
 # 数据库连接
 def get_db_connection():
-    conn = sqlite3.connect('database.db')  # 使用 SQLite 数据库
-    conn.row_factory = sqlite3.Row  # 使得查询结果可以通过列名访问
+    conn = psycopg2.connect(
+        dbname=os.environ['DB_NAME'],      # 从环境变量获取数据库名称
+        user=os.environ['DB_USER'],        # 从环境变量获取用户名
+        password=os.environ['DB_PASSWORD'], # 从环境变量获取密码
+        host=os.environ['DB_HOST'],         # 从环境变量获取主机
+        port=os.environ['DB_PORT']          # 从环境变量获取端口
+    )
     return conn
 
 # 初始化数据库并创建表
 def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
+
     # 创建用户表
-    cursor.execute('''CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, password TEXT)''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            username TEXT PRIMARY KEY,
+            password TEXT
+        )
+    ''')
+
     # 创建会员表
-    cursor.execute('''CREATE TABLE IF NOT EXISTS members (
-        id INTEGER PRIMARY KEY,
-        name TEXT,
-        contact TEXT,
-        recharge_amount REAL,
-        balance REAL
-    )''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS members (
+            id SERIAL PRIMARY KEY,
+            name TEXT,
+            contact TEXT,
+            recharge_amount REAL,
+            balance REAL
+        )
+    ''')
+
     # 创建销售记录表
-    cursor.execute('''CREATE TABLE IF NOT EXISTS sales (
-        id INTEGER PRIMARY KEY,
-        date TEXT,
-        activity TEXT,
-        sessions INTEGER,
-        dm TEXT,
-        players TEXT,
-        income REAL,
-        expenses REAL,
-        profit REAL,
-        total REAL
-    )''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS sales (
+            id SERIAL PRIMARY KEY,
+            date TEXT,
+            activity TEXT,
+            sessions INTEGER,
+            dm TEXT,
+            players TEXT,
+            income REAL,
+            expenses REAL,
+            profit REAL,
+            total REAL
+        )
+    ''')
 
     # 添加默认用户
     users = [
@@ -47,7 +65,7 @@ def init_db():
     ]
     for username, password in users:
         hashed_password = generate_password_hash(password)
-        cursor.execute("INSERT OR IGNORE INTO users (username, password) VALUES (?, ?)", (username, hashed_password))
+        cursor.execute("INSERT INTO users (username, password) VALUES (%s, %s) ON CONFLICT (username) DO NOTHING;", (username, hashed_password))
 
     conn.commit()
     cursor.close()
@@ -61,7 +79,7 @@ def login():
         password = request.form['password']
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT password FROM users WHERE username = ?", (username,))
+        cursor.execute("SELECT password FROM users WHERE username = %s", (username,))
         user = cursor.fetchone()
         cursor.close()
         conn.close()
@@ -93,7 +111,6 @@ def members():
     cursor.close()
     conn.close()
     
-    # 将数据转换为 JSON 格式
     members_data = [
         {
             "name": member[0],
@@ -118,7 +135,6 @@ def sales():
     cursor.close()
     conn.close()
     
-    # 将数据转换为 JSON 格式
     sales_data = [
         {
             "date": sale[0],
@@ -150,7 +166,7 @@ def save_members():
     cursor.execute("DELETE FROM members")
     for row in data:
         if row[0] and row[1]:  # 确保名字和电话不为空
-            cursor.execute("INSERT INTO members (name, contact, recharge_amount, balance) VALUES (?, ?, ?, ?)",
+            cursor.execute("INSERT INTO members (name, contact, recharge_amount, balance) VALUES (%s, %s, %s, %s)",
                            (row[0], row[1], row[2] if row[2] else 0, row[3] if row[3] else 0))
     
     conn.commit()
@@ -172,7 +188,7 @@ def save_sales():
     cursor.execute("DELETE FROM sales")
     for row in data:
         if row[0] and row[1]:  # 确保日期和活动名称不为空
-            cursor.execute("INSERT INTO sales (date, activity, sessions, dm, players, income, expenses, profit, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            cursor.execute("INSERT INTO sales (date, activity, sessions, dm, players, income, expenses, profit, total) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
                            (row[0], row[1], row[2] if row[2] else 0, row[3], row[4], row[5] if row[5] else 0, row[6] if row[6] else 0, row[7] if row[7] else 0, row[8] if row[8] else 0))
     
     conn.commit()
@@ -189,3 +205,5 @@ def logout():
 if __name__ == '__main__':
     init_db()
     app.run(debug=True)
+
+   
