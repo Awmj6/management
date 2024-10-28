@@ -1,85 +1,32 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <title>营业记录</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@latest/dist/handsontable.full.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/handsontable@latest/dist/handsontable.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <meta charset="UTF-8">
+    <title>会员名单</title>
+    <link rel="stylesheet" href="https://your-css-link.com/style.css"> <!-- 自定义样式 -->
 </head>
 <body>
-    <h2>营业记录</h2>
-
-    <div id="sales-table"></div>
-    <button onclick="saveData()">保存</button>
-    <button onclick="exportToExcel('sales')">导出为 Excel</button>
-
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        const container = document.getElementById('sales-table');
-
-        const salesData = {{ sales_data | tojson }};
-        const formattedData = salesData.map(sale => [
-          sale.date,
-          sale.activity,
-          sale.sessions,
-          sale.dm,
-          sale.players,
-          sale.income,
-          sale.expenses,
-          sale.profit,
-          sale.total
-        ]);
-
-        const hot = new Handsontable(container, {
-          data: formattedData,
-          colHeaders: ["日期", "剧本/活动", "开本次数", "DM", "玩家+补车", "收入", "支出（DM+其他）", "利润", "总额"],
-          rowHeaders: true,
-          contextMenu: true,
-          manualColumnResize: true,
-          manualRowResize: true,
-          minSpareRows: 1,
-          columns: [
-            {},
-            {},
-            { type: 'numeric' },
-            {},
-            {},
-            { type: 'numeric' },
-            { type: 'numeric' },
-            { type: 'numeric' },
-            { type: 'numeric' }
-          ],
-          licenseKey: 'non-commercial-and-evaluation'
-        });
-
-        function saveData() {
-          const data = hot.getData().filter(row => row.some(cell => cell !== null && cell !== ""));
-          $.ajax({
-            url: '/save_sales',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify(data),
-            success: function(response) {
-              alert("表格保存成功!");
-            },
-            error: function(error) {
-              console.error("保存失败:", error);
-            }
-          });
-        }
-
-        window.saveData = saveData;
-
-      });
-
-      function exportToExcel(sheetName) {
-        const data = hot.getData();
-        const ws = XLSX.utils.aoa_to_sheet([["日期", "剧本/活动", "开本次数", "DM", "玩家+补车", "收入", "支出（DM+其他）", "利润", "总额"], ...data]);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, sheetName);
-        XLSX.writeFile(wb, `${sheetName}.xlsx`);
-      }
-    </script>
+    <h2>会员名单</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>会员名字</th>
+                <th>电话号码</th>
+                <th>充值金额</th>
+                <th>存储金额</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for member in members_data %}
+            <tr>
+                <td>{{ member.name }}</td>
+                <td>{{ member.contact }}</td>
+                <td>{{ member.recharge_amount }}</td>
+                <td>{{ member.balance }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <a href="/logout">退出登录</a> <!-- 退出链接 -->
 </body>
 </html>
