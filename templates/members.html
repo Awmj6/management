@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Members List</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@latest/dist/handsontable.full.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/handsontable@latest/dist/handsontable.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h2>Members List</h2>
+
+    <!-- Handsontable 表格容器 -->
+    <div id="members-table"></div>
+    <button onclick="saveData()">保存</button>
+    <button onclick="exportToExcel('members')">导出为 Excel</button>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const container = document.getElementById('members-table');
+
+        // 初始化会员数据（后端传来的数据，已转换为 JSON 格式）
+        const membersData = {{ members_data | tojson }};
+
+        // 格式化数据为 Handsontable 可用的数组格式
+        const formattedData = membersData.map(member => [
+          member.name,
+          member.contact,
+          member.recharge_amount,
+          member.balance
+        ]);
+
+        // Handsontable 配置
+        const hot = new Handsontable(container, {
+          data: formattedData,
+          colHeaders: ["会员名字", "电话号码", "充值金额", "存储金额"],
+          rowHeaders: true,
+          contextMenu: true,
+          manualColumnResize: true,
+          manualRowResize: true,
+          minSpareRows: 1, // 启用空白行，允许添加新数据
+          columns: [
+            {}, // 会员名字
+            {}, // 电话号码
+            { type: 'numeric' }, // 充值金额
+            { type: 'numeric' }  // 存储金额
+          ],
+          licenseKey: 'non-commercial-and-evaluation'
+        });
+
+        // 保存数据到服务器
+        function saveData() {
+          const data = hot.getData().filter(row => row.some(cell => cell !== null && cell !== "")); // 去除空行
+          $.ajax({
+            url: '/save_members',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function(response) {
+              alert("Data saved successfully!");
+            },
+            error: function(error) {
+              console.error("Error saving data:", error);
+            }
+          });
+        }
+
+        window.saveData = saveData; // 使 saveData 函数在全局可用
+
+      });
+
+      // 导出为 Excel
+      function exportToExcel(sheetName) {
+        const data = hot.getData();
+        const ws = XLSX.utils.aoa_to_sheet([["会员名字", "电话号码", "充值金额", "存储金额"], ...data]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        XLSX.writeFile(wb, `${sheetName}.xlsx`);
+      }
+    </script>
+</body>
+</html>
