@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
-    <title>Members List</title>
+    <title>会员名单</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@latest/dist/handsontable.full.min.css">
     <script src="https://cdn.jsdelivr.net/npm/handsontable@latest/dist/handsontable.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
-    <h2>Members List</h2>
+    <h2>会员名单</h2>
 
     <div id="members-table"></div>
     <button onclick="saveData()">保存</button>
@@ -51,10 +51,10 @@
             contentType: 'application/json',
             data: JSON.stringify(data),
             success: function(response) {
-              alert("Data saved successfully!");
+              alert("表格保存成功!");
             },
             error: function(error) {
-              console.error("Error saving data:", error);
+              console.error("保存失败:", error);
             }
           });
         }
