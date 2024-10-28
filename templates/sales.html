@@ -10,7 +10,6 @@
 <body>
     <h2>Sales Records</h2>
 
-    <!-- Handsontable 表格容器 -->
     <div id="sales-table"></div>
     <button onclick="saveData()">保存</button>
     <button onclick="exportToExcel('sales')">导出为 Excel</button>
@@ -19,10 +18,7 @@
       document.addEventListener("DOMContentLoaded", function () {
         const container = document.getElementById('sales-table');
 
-        // 初始化销售数据（后端传来的数据，已转换为 JSON 格式）
         const salesData = {{ sales_data | tojson }};
-
-        // 格式化数据为 Handsontable 可用的数组格式
         const formattedData = salesData.map(sale => [
           sale.date,
           sale.activity,
@@ -35,7 +31,6 @@
           sale.total
         ]);
 
-        // Handsontable 配置
         const hot = new Handsontable(container, {
           data: formattedData,
           colHeaders: ["日期", "剧本/活动", "开本次数", "DM", "玩家+补车", "收入", "支出（DM+其他）", "利润", "总额"],
@@ -43,24 +38,23 @@
           contextMenu: true,
           manualColumnResize: true,
           manualRowResize: true,
-          minSpareRows: 1, // 启用空白行，允许添加新数据
+          minSpareRows: 1,
           columns: [
-            {}, // 日期
-            {}, // 剧本/活动
-            { type: 'numeric' }, // 开本次数
-            {}, // DM
-            {}, // 玩家+补车
-            { type: 'numeric' }, // 收入
-            { type: 'numeric' }, // 支出
-            { type: 'numeric' }, // 利润
-            { type: 'numeric' }  // 总额
+            {},
+            {},
+            { type: 'numeric' },
+            {},
+            {},
+            { type: 'numeric' },
+            { type: 'numeric' },
+            { type: 'numeric' },
+            { type: 'numeric' }
           ],
           licenseKey: 'non-commercial-and-evaluation'
         });
 
-        // 保存数据到服务器
         function saveData() {
-          const data = hot.getData().filter(row => row.some(cell => cell !== null && cell !== "")); // 去除空行
+          const data = hot.getData().filter(row => row.some(cell => cell !== null && cell !== ""));
           $.ajax({
             url: '/save_sales',
             method: 'POST',
@@ -75,11 +69,10 @@
           });
         }
 
-        window.saveData = saveData; // 使 saveData 函数在全局可用
+        window.saveData = saveData;
 
       });
 
-      // 导出为 Excel
       function exportToExcel(sheetName) {
         const data = hot.getData();
         const ws = XLSX.utils.aoa_to_sheet([["日期", "剧本/活动", "开本次数", "DM", "玩家+补车", "收入", "支出（DM+其他）", "利润", "总额"], ...data]);

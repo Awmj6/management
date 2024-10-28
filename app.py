@@ -1,14 +1,14 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
-import psycopg2
+import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
-import os
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
 
 # 数据库连接
 def get_db_connection():
-    conn = psycopg2.connect(os.getenv('DATABASE_URL'))  # 使用环境变量中的连接字符串
+    conn = sqlite3.connect('database.db')  # 使用 SQLite 数据库
+    conn.row_factory = sqlite3.Row  # 使得查询结果可以通过列名访问
     return conn
 
 # 初始化数据库并创建表
@@ -19,7 +19,7 @@ def init_db():
     cursor.execute('''CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, password TEXT)''')
     # 创建会员表
     cursor.execute('''CREATE TABLE IF NOT EXISTS members (
-        id SERIAL PRIMARY KEY,
+        id INTEGER PRIMARY KEY,
         name TEXT,
         contact TEXT,
         recharge_amount REAL,
@@ -27,7 +27,7 @@ def init_db():
     )''')
     # 创建销售记录表
     cursor.execute('''CREATE TABLE IF NOT EXISTS sales (
-        id SERIAL PRIMARY KEY,
+        id INTEGER PRIMARY KEY,
         date TEXT,
         activity TEXT,
         sessions INTEGER,
@@ -41,13 +41,13 @@ def init_db():
 
     # 添加默认用户
     users = [
-        ('admin', 'admin123'),
-        ('manager', 'manager123'),
-        ('staff', 'staff123')
+        ('xuezhang', '123459876'),
+        ('qianqian', '123459876'),
+        ('tudousi', '123459876')
     ]
     for username, password in users:
         hashed_password = generate_password_hash(password)
-        cursor.execute("INSERT INTO users (username, password) VALUES (%s, %s) ON CONFLICT (username) DO NOTHING", (username, hashed_password))
+        cursor.execute("INSERT OR IGNORE INTO users (username, password) VALUES (?, ?)", (username, hashed_password))
 
     conn.commit()
     cursor.close()
@@ -61,11 +61,11 @@ def login():
         password = request.form['password']
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT password FROM users WHERE username = %s", (username,))
+        cursor.execute("SELECT password FROM users WHERE username = ?", (username,))
         user = cursor.fetchone()
         cursor.close()
         conn.close()
-
+        
         if user and check_password_hash(user[0], password):
             session['username'] = username
             return redirect(url_for('dashboard'))
@@ -150,7 +150,7 @@ def save_members():
     cursor.execute("DELETE FROM members")
     for row in data:
         if row[0] and row[1]:  # 确保名字和电话不为空
-            cursor.execute("INSERT INTO members (name, contact, recharge_amount, balance) VALUES (%s, %s, %s, %s)",
+            cursor.execute("INSERT INTO members (name, contact, recharge_amount, balance) VALUES (?, ?, ?, ?)",
                            (row[0], row[1], row[2] if row[2] else 0, row[3] if row[3] else 0))
     
     conn.commit()
@@ -172,7 +172,7 @@ def save_sales():
     cursor.execute("DELETE FROM sales")
     for row in data:
         if row[0] and row[1]:  # 确保日期和活动名称不为空
-            cursor.execute("INSERT INTO sales (date, activity, sessions, dm, players, income, expenses, profit, total) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            cursor.execute("INSERT INTO sales (date, activity, sessions, dm, players, income, expenses, profit, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                            (row[0], row[1], row[2] if row[2] else 0, row[3], row[4], row[5] if row[5] else 0, row[6] if row[6] else 0, row[7] if row[7] else 0, row[8] if row[8] else 0))
     
     conn.commit()
